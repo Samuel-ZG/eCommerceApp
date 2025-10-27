@@ -77,6 +77,28 @@ builder.Services.AddSwaggerGen(c =>
 // --- Construir la App ---
 var app = builder.Build();
 
+// --- AÑADIR ESTE BLOQUE PARA SEMBRAR DATOS (SEED) ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        // Obtiene los servicios de Identity
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // Llama a nuestro inicializador estático
+        await ECommerceAPI.Data.DbInitializer.Initialize(userManager, roleManager);
+    }
+    catch (Exception ex)
+    {
+        // Si algo sale mal, lo registra en la consola
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Un error ocurrió al sembrar la base de datos.");
+    }
+}
+// --- FIN DEL BLOQUE AÑADIDO ---
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
