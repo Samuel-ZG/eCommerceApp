@@ -34,10 +34,15 @@ namespace ECommerceAPI.Controllers
             }
 
             // 2. Crear el nuevo usuario
-            var newUser = new ApplicationUser
+            var newUser = new ApplicationUser()
             {
-                UserName = registerDto.Username,
-                Email = registerDto.Email
+                Email = registerDto.Email,
+                SecurityStamp = Guid.NewGuid().ToString(),
+                // Usamos el Email como UserName
+                UserName = registerDto.Email, 
+                // Guardamos los nuevos campos
+                Nombre = registerDto.Nombre,
+                Apellido = registerDto.Apellido 
             };
 
             var result = await _userManager.CreateAsync(newUser, registerDto.Password);

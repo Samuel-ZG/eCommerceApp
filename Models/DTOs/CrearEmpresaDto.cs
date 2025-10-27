@@ -2,13 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ECommerceAPI.Models.DTOs
 {
-    public class RegisterEmpresaRequestDto
+    public class CrearEmpresaDto
     {
-        [Required(ErrorMessage = "El nombre de usuario es obligatorio")]
-        public string Username { get; set; }
-
         [Required(ErrorMessage = "El email es obligatorio")]
-        [EmailAddress(ErrorMessage = "Formato de email inválido")]
+        [EmailAddress]
         public string Email { get; set; }
 
         [Required(ErrorMessage = "La contraseña es obligatoria")]
@@ -16,8 +13,9 @@ namespace ECommerceAPI.Models.DTOs
         public string Password { get; set; }
 
         [Required(ErrorMessage = "El nombre de la empresa es obligatorio")]
-        public string NombreEmpresa { get; set; }
+        public string Nombre { get; set; }
 
-        public string? DescripcionEmpresa { get; set; }
+        [Required(ErrorMessage = "El rubro es obligatorio")]
+        public string Rubro { get; set; }
     }
 }

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ECommerceAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251027033456_MigracionCompleta_Paso6")]
-    partial class MigracionCompleta_Paso6
+    [Migration("20251027170125_AnadirTablasDePedidos")]
+    partial class AnadirTablasDePedidos
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -132,32 +132,88 @@ namespace ECommerceAPI.Migrations
                     b.ToTable("CarritoItems");
                 });
 
+            modelBuilder.Entity("ECommerceAPI.Models.DetallePedido", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NombreProducto")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PedidoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("PrecioUnitario")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("ProductoId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoId");
+
+                    b.HasIndex("ProductoId");
+
+                    b.ToTable("DetallePedidos");
+                });
+
             modelBuilder.Entity("ECommerceAPI.Models.Empresa", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Descripcion")
+                    b.Property<string>("ApplicationUserId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("LogoUrl")
+                    b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("UserId")
+                    b.Property<string>("Rubro")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.ToTable("Empresas");
+                });
+
+            modelBuilder.Entity("ECommerceAPI.Models.Pedido", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("UsuarioId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UsuarioId");
 
-                    b.ToTable("Empresas");
+                    b.ToTable("Pedidos");
                 });
 
             modelBuilder.Entity("ECommerceAPI.Models.Producto", b =>
@@ -351,15 +407,44 @@ namespace ECommerceAPI.Migrations
                     b.Navigation("Producto");
                 });
 
-            modelBuilder.Entity("ECommerceAPI.Models.Empresa", b =>
+            modelBuilder.Entity("ECommerceAPI.Models.DetallePedido", b =>
                 {
-                    b.HasOne("ECommerceAPI.Data.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
+                    b.HasOne("ECommerceAPI.Models.Pedido", "Pedido")
+                        .WithMany("Detalles")
+                        .HasForeignKey("PedidoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.HasOne("ECommerceAPI.Models.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Pedido");
+
+                    b.Navigation("Producto");
+                });
+
+            modelBuilder.Entity("ECommerceAPI.Models.Empresa", b =>
+                {
+                    b.HasOne("ECommerceAPI.Data.ApplicationUser", "ApplicationUser")
+                        .WithMany()
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApplicationUser");
+                });
+
+            modelBuilder.Entity("ECommerceAPI.Models.Pedido", b =>
+                {
+                    b.HasOne("ECommerceAPI.Data.ApplicationUser", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("ECommerceAPI.Models.Producto", b =>
@@ -437,6 +522,11 @@ namespace ECommerceAPI.Migrations
             modelBuilder.Entity("ECommerceAPI.Models.Empresa", b =>
                 {
                     b.Navigation("Productos");
+                });
+
+            modelBuilder.Entity("ECommerceAPI.Models.Pedido", b =>
+                {
+                    b.Navigation("Detalles");
                 });
 #pragma warning restore 612, 618
         }

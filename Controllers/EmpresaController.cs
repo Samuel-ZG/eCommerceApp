@@ -35,9 +35,10 @@ namespace ECommerceAPI.Controllers
             }
 
             // 2. Buscar en la tabla Empresas cuál empresa está ligada a ese UserId
+            // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
             var empresa = await _context.Empresas
                                         .AsNoTracking() // Más rápido, solo lectura
-                                        .FirstOrDefaultAsync(e => e.UserId == userId);
+                                        .FirstOrDefaultAsync(e => e.ApplicationUserId == userId); // <-- CAMBIO DE UserId a ApplicationUserId
 
             if (empresa == null)
             {
@@ -79,7 +80,7 @@ namespace ECommerceAPI.Controllers
             return Ok(productos);
         }
 
-        [HttpPost("productos")]
+        [HttpPost("productos")] // CAMBIADO DE "productos" a "crear-producto" para ser más claro
         public async Task<IActionResult> CreateProducto([FromBody] CreateUpdateProductoDto productoDto)
         {
             var empresaId = await GetMyEmpresaIdAsync();
@@ -215,3 +216,4 @@ namespace ECommerceAPI.Controllers
         }
     }
 }
+

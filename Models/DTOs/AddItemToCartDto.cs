@@ -6,7 +6,7 @@ namespace ECommerceAPI.Models.DTOs
     {
         [Required]
         public int ProductoId { get; set; }
-    
+        
         [Required]
         [Range(1, 100)]
         public int Cantidad { get; set; }

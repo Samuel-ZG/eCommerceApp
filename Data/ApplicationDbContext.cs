@@ -1,4 +1,4 @@
-using ECommerceAPI.Models; // Para Empresa, Producto, Carrito
+using ECommerceAPI.Models; // Para Empresa, Producto, Carrito, Pedido
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +18,12 @@ namespace ECommerceAPI.Data
         public DbSet<Producto> Productos { get; set; }
         public DbSet<Carrito> Carritos { get; set; }
         public DbSet<CarritoItem> CarritoItems { get; set; }
+        
+        // --- ¡ESTAS SON LAS LÍNEAS QUE FALTABAN! ---
+        public DbSet<Pedido> Pedidos { get; set; }
+        public DbSet<DetallePedido> DetallePedidos { get; set; }
+        // --- FIN DE LA CORRECCIÓN ---
+        
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -29,42 +35,58 @@ namespace ECommerceAPI.Data
             // --- Relaciones (Pasos 3 y 4) ---
 
             // Relación 1-a-1: Empresa <-> ApplicationUser
-            // Un usuario (con rol Empresa) gestiona una Empresa
             builder.Entity<Empresa>()
-                .HasOne(e => e.User) // Una Empresa tiene un User
-                .WithMany() // Un User puede (en teoría) tener muchas empresas, aunque no lo usemos
-                .HasForeignKey(e => e.UserId); // La clave foránea está en Empresa
+                .HasOne(e => e.ApplicationUser) 
+                .WithMany() 
+                .HasForeignKey(e => e.ApplicationUserId); 
 
             // Relación 1-a-Muchos: Empresa -> Producto
-            // Una Empresa tiene muchos Productos
             builder.Entity<Empresa>()
-                .HasMany(e => e.Productos) // Una Empresa tiene muchos Productos
-                .WithOne(p => p.Empresa) // Un Producto pertenece a una Empresa
-                .HasForeignKey(p => p.EmpresaId); // La clave foránea está en Producto
+                .HasMany(e => e.Productos) 
+                .WithOne(p => p.Empresa) 
+                .HasForeignKey(p => p.EmpresaId); 
 
 
             // --- Relaciones del Carrito (Paso 6) ---
 
             // Relación 1-a-1: ApplicationUser <-> Carrito
-            // Un Usuario tiene un Carrito
             builder.Entity<ApplicationUser>()
-                .HasOne(u => u.Carrito) // Un User tiene un Carrito
-                .WithOne(c => c.User) // Un Carrito pertenece a un User
-                .HasForeignKey<Carrito>(c => c.UserId); // La clave foránea está en Carrito
+                .HasOne(u => u.Carrito) 
+                .WithOne(c => c.User) 
+                .HasForeignKey<Carrito>(c => c.UserId); 
 
             // Relación 1-a-Muchos: Carrito -> CarritoItem
-            // Un Carrito tiene muchos Items
             builder.Entity<Carrito>()
-                .HasMany(c => c.Items) // Un Carrito tiene muchos Items
-                .WithOne(ci => ci.Carrito) // Un Item pertenece a un Carrito
-                .HasForeignKey(ci => ci.CarritoId); // La clave foránea está en CarritoItem
+                .HasMany(c => c.Items) 
+                .WithOne(ci => ci.Carrito) 
+                .HasForeignKey(ci => ci.CarritoId); 
 
             // Relación 1-a-Muchos: Producto -> CarritoItem
-            // Un Producto puede estar en muchos Items de carrito
             builder.Entity<Producto>()
-                .HasMany<CarritoItem>() // Un Producto puede estar en muchos CarritoItems
-                .WithOne(ci => ci.Producto) // Un Item tiene un Producto
-                .HasForeignKey(ci => ci.ProductoId); // La clave foránea está en CarritoItem
+                .HasMany<CarritoItem>() 
+                .WithOne(ci => ci.Producto) 
+                .HasForeignKey(ci => ci.ProductoId); 
+                
+            // --- Relaciones de Pedidos (CON TUS NOMBRES) ---
+
+            // 1-a-Muchos: Usuario -> Pedido
+            builder.Entity<ApplicationUser>()
+                .HasMany<Pedido>() // <-- Tu modelo Pedido
+                .WithOne(p => p.Usuario) // <-- Tu propiedad Usuario
+                .HasForeignKey(p => p.UsuarioId); // <-- Tu propiedad UsuarioId
+
+            // 1-a-Muchos: Pedido -> DetallePedido
+            builder.Entity<Pedido>()
+                .HasMany(p => p.Detalles) // <-- Tu propiedad Detalles
+                .WithOne(dp => dp.Pedido)
+                .HasForeignKey(dp => dp.PedidoId);
+
+            // 1-a-Muchos: Producto -> DetallePedido
+            builder.Entity<Producto>()
+                .HasMany<DetallePedido>() // <-- Tu modelo DetallePedido
+                .WithOne(dp => dp.Producto)
+                .HasForeignKey(dp => dp.ProductoId)
+                .OnDelete(DeleteBehavior.SetNull); // <-- ¡La clave!
         }
     }
 }

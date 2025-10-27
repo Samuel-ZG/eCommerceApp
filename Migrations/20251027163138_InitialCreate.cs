@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ECommerceAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class MigracionCompleta_Paso6 : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -183,17 +183,38 @@ namespace ECommerceAPI.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Nombre = table.Column<string>(type: "TEXT", nullable: false),
-                    Descripcion = table.Column<string>(type: "TEXT", nullable: false),
-                    LogoUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    UserId = table.Column<string>(type: "TEXT", nullable: false)
+                    Nombre = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Rubro = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    FechaRegistro = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    ApplicationUserId = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Empresas", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Empresas_AspNetUsers_UserId",
-                        column: x => x.UserId,
+                        name: "FK_Empresas_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Pedido",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Fecha = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Total = table.Column<decimal>(type: "decimal(18, 2)", nullable: false),
+                    UsuarioId = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Pedido", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Pedido_AspNetUsers_UsuarioId",
+                        column: x => x.UsuarioId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -250,6 +271,35 @@ namespace ECommerceAPI.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "DetallePedido",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    PedidoId = table.Column<int>(type: "INTEGER", nullable: false),
+                    ProductoId = table.Column<int>(type: "INTEGER", nullable: true),
+                    Cantidad = table.Column<int>(type: "INTEGER", nullable: false),
+                    PrecioUnitario = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    NombreProducto = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DetallePedido", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DetallePedido_Pedido_PedidoId",
+                        column: x => x.PedidoId,
+                        principalTable: "Pedido",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DetallePedido_Productos_ProductoId",
+                        column: x => x.ProductoId,
+                        principalTable: "Productos",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -304,9 +354,24 @@ namespace ECommerceAPI.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Empresas_UserId",
+                name: "IX_DetallePedido_PedidoId",
+                table: "DetallePedido",
+                column: "PedidoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DetallePedido_ProductoId",
+                table: "DetallePedido",
+                column: "ProductoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Empresas_ApplicationUserId",
                 table: "Empresas",
-                column: "UserId");
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Pedido_UsuarioId",
+                table: "Pedido",
+                column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Productos_EmpresaId",
@@ -336,10 +401,16 @@ namespace ECommerceAPI.Migrations
                 name: "CarritoItems");
 
             migrationBuilder.DropTable(
+                name: "DetallePedido");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "Carritos");
+
+            migrationBuilder.DropTable(
+                name: "Pedido");
 
             migrationBuilder.DropTable(
                 name: "Productos");

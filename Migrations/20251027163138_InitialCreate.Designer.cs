@@ -3,6 +3,7 @@ using System;
 using ECommerceAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ECommerceAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251027163138_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
@@ -157,7 +160,7 @@ namespace ECommerceAPI.Migrations
 
                     b.HasIndex("ProductoId");
 
-                    b.ToTable("DetallePedidos");
+                    b.ToTable("DetallePedido");
                 });
 
             modelBuilder.Entity("ECommerceAPI.Models.Empresa", b =>
@@ -210,7 +213,7 @@ namespace ECommerceAPI.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("Pedidos");
+                    b.ToTable("Pedido");
                 });
 
             modelBuilder.Entity("ECommerceAPI.Models.Producto", b =>

@@ -1,187 +1,143 @@
-    using ECommerceAPI.Data;
-    using ECommerceAPI.Models;
-    using ECommerceAPI.Models.DTOs;
-    using Microsoft.AspNetCore.Authorization;
-    using Microsoft.AspNetCore.Identity;
-    using Microsoft.AspNetCore.Mvc;
-    using Microsoft.EntityFrameworkCore;
-    using System.Security.Claims;
+using ECommerceAPI.Data;
+using ECommerceAPI.Models;
+using ECommerceAPI.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
-    namespace ECommerceAPI.Controllers
+namespace ECommerceAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class CarritoController : ControllerBase
     {
-        [Route("api/[controller]")]
-        [ApiController]
-        [Authorize(Roles = "Usuario")] // ¡LA CLAVE! Solo usuarios normales
-        public class CarritoController : ControllerBase
+        private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        public CarritoController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
-            private readonly ApplicationDbContext _context;
-            private readonly UserManager<ApplicationUser> _userManager;
+            _context = context;
+            _userManager = userManager;
+        }
 
-            public CarritoController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        // --- ¡MÉTODO CRÍTICO! ---
+        // Carga el carrito CON sus items y productos
+        private async Task<Carrito> GetOrCreateCarritoAsync(string userId)
+        {
+            var carrito = await _context.Carritos
+                // --- ¡ESTA LÍNEA DEPENDE DEL MODELO QUE ACABAMOS DE ARREGLAR! ---
+                .Include(c => c.Items)                 
+                    .ThenInclude(item => item.Producto) 
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (carrito == null)
             {
-                _context = context;
-                _userManager = userManager;
+                carrito = new Carrito { UserId = userId };
+                _context.Carritos.Add(carrito);
+                await _context.SaveChangesAsync();
             }
 
-            // --- MÉTODO PRIVADO DE AYUDA ---
-            private async Task<Carrito?> GetMyCartAsync()
+            return carrito;
+        }
+
+        // --- ENDPOINT GET (CORREGIDO) ---
+        [HttpGet]
+        public async Task<IActionResult> GetMyCarrito()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var carrito = await GetOrCreateCarritoAsync(userId); 
+
+            var dto = new CarritoResponseDto
             {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
+                Id = carrito.Id,
+                UserId = carrito.UserId,
+                Items = carrito.Items.Select(item => new CarritoItemResponseDto
                 {
-                    return null; // No debería pasar si está autorizado
-                }
-
-                // Busca el carrito, incluyendo los items, sus productos y la empresa
-                var carrito = await _context.Carritos
-                    .Include(c => c.Items)
-                        .ThenInclude(item => item.Producto)
-                            .ThenInclude(p => p.Empresa)
-                    .FirstOrDefaultAsync(c => c.UserId == userId);
-
-                // Si el usuario no tiene carrito (primera vez), se lo creamos
-                if (carrito == null)
-                {
-                    carrito = new Carrito { UserId = userId };
-                    _context.Carritos.Add(carrito);
-                    await _context.SaveChangesAsync();
-                }
-
-                return carrito;
-            }
-
-            // --- MÉTODO PRIVADO DE MAPEO ---
-            private CartResponseDto MapCartToDto(Carrito carrito)
-            {
-                var itemsDto = carrito.Items.Select(item => new CartItemResponseDto
-                {
+                    Id = item.Id,
                     ProductoId = item.ProductoId,
-                    NombreProducto = item.Producto.Nombre,
-                    PrecioProducto = item.Producto.Precio,
-                    ImagenUrl = item.Producto.ImagenUrl,
-                    NombreEmpresa = item.Producto.Empresa.Nombre,
+                    ProductoNombre = item.Producto?.Nombre ?? "Producto no disponible",
+                    Precio = (double)(item.Producto?.Precio ?? 0m), // Corrección decimal
                     Cantidad = item.Cantidad,
-                    SubTotal = item.Producto.Precio * item.Cantidad
-                }).ToList();
+                    ImageUrl = item.Producto?.ImagenUrl ?? ""
+                }).ToList()
+            };
 
-                return new CartResponseDto
+            dto.Total = dto.Items.Sum(item => item.Precio * item.Cantidad);
+            return Ok(dto);
+        }
+
+        // --- ENDPOINT POST (Añadir) ---
+        [HttpPost("add")]
+        public async Task<IActionResult> AddItemToCarrito([FromBody] AddItemToCartDto itemDto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var carrito = await _context.Carritos.FirstOrDefaultAsync(c => c.UserId == userId);
+            if (carrito == null)
+            {
+                carrito = new Carrito { UserId = userId };
+                _context.Carritos.Add(carrito);
+                await _context.SaveChangesAsync();
+            }
+
+            var producto = await _context.Productos.FindAsync(itemDto.ProductoId);
+            if (producto == null) return NotFound(new { message = "Producto no encontrado." });
+            if (producto.Stock < itemDto.Cantidad) return BadRequest(new { message = "Stock insuficiente." });
+
+            var itemEnCarrito = await _context.CarritoItems
+                .FirstOrDefaultAsync(ci => ci.CarritoId == carrito.Id && ci.ProductoId == itemDto.ProductoId);
+
+            if (itemEnCarrito != null)
+            {
+                itemEnCarrito.Cantidad += itemDto.Cantidad;
+            }
+            else
+            {
+                var nuevoItem = new CarritoItem
                 {
                     CarritoId = carrito.Id,
-                    UserId = carrito.UserId,
-                    Items = itemsDto,
-                    Total = itemsDto.Sum(item => item.SubTotal)
+                    ProductoId = itemDto.ProductoId,
+                    Cantidad = itemDto.Cantidad,
                 };
+                _context.CarritoItems.Add(nuevoItem);
             }
 
-            // --- ENDPOINTS ---
+            producto.Stock -= itemDto.Cantidad;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Producto añadido al carrito." });
+        }
 
-            [HttpGet]
-            public async Task<IActionResult> GetMyCart()
+
+        // --- ENDPOINT DELETE (Quitar) ---
+        [HttpDelete("remove/{itemId}")]
+        public async Task<IActionResult> RemoveItemFromCarrito(int itemId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var carrito = await _context.Carritos.FirstOrDefaultAsync(c => c.UserId == userId);
+            if (carrito == null) return NotFound(new { message = "Carrito no encontrado." });
+
+            var itemEnCarrito = await _context.CarritoItems
+                .Include(ci => ci.Producto) 
+                .FirstOrDefaultAsync(ci => ci.CarritoId == carrito.Id && ci.Id == itemId);
+
+            if (itemEnCarrito == null) return NotFound(new { message = "Item no encontrado en el carrito." });
+
+            if (itemEnCarrito.Producto != null)
             {
-                var carrito = await GetMyCartAsync();
-                if (carrito == null)
-                {
-                    return Unauthorized();
-                }
-
-                return Ok(MapCartToDto(carrito));
+                itemEnCarrito.Producto.Stock += itemEnCarrito.Cantidad;
             }
 
-            [HttpPost("add")]
-            public async Task<IActionResult> AddItemToCart([FromBody] AddItemToCartDto itemDto)
-            {
-                var carrito = await GetMyCartAsync();
-                if (carrito == null) return Unauthorized();
-
-                // 1. Validar el producto
-                var producto = await _context.Productos.FindAsync(itemDto.ProductoId);
-                if (producto == null)
-                {
-                    return NotFound(new { Message = "Producto no encontrado." });
-                }
-                if (producto.Stock < itemDto.Cantidad)
-                {
-                    return BadRequest(new { Message = $"Stock insuficiente. Solo quedan {producto.Stock}." });
-                }
-
-                // 2. Revisar si el item ya está en el carrito
-                var itemEnCarrito = carrito.Items.FirstOrDefault(i => i.ProductoId == itemDto.ProductoId);
-
-                if (itemEnCarrito != null)
-                {
-                    // Si ya existe, actualiza la cantidad
-                    itemEnCarrito.Cantidad += itemDto.Cantidad;
-                }
-                else
-                {
-                    // Si no existe, lo crea
-                    var nuevoItem = new CarritoItem
-                    {
-                        CarritoId = carrito.Id,
-                        ProductoId = itemDto.ProductoId,
-                        Cantidad = itemDto.Cantidad
-                    };
-                    _context.CarritoItems.Add(nuevoItem);
-                }
-
-                await _context.SaveChangesAsync();
-
-                // Recargar el carrito con los datos actualizados para devolverlo
-                var carritoActualizado = await GetMyCartAsync();
-                return Ok(MapCartToDto(carritoActualizado!));
-            }
-
-            [HttpPut("update/{productoId}")]
-            public async Task<IActionResult> UpdateCartItem(int productoId, [FromBody] UpdateCartItemDto itemDto)
-            {
-                var carrito = await GetMyCartAsync();
-                if (carrito == null) return Unauthorized();
-
-                var itemEnCarrito = carrito.Items.FirstOrDefault(i => i.ProductoId == productoId);
-                if (itemEnCarrito == null)
-                {
-                    return NotFound(new { Message = "Producto no encontrado en el carrito." });
-                }
-
-                if (itemDto.NuevaCantidad == 0)
-                {
-                    // Si la cantidad es 0, lo elimina
-                    _context.CarritoItems.Remove(itemEnCarrito);
-                }
-                else
-                {
-                    // Valida el stock
-                    var producto = await _context.Productos.FindAsync(productoId);
-                    if (producto.Stock < itemDto.NuevaCantidad)
-                    {
-                        return BadRequest(new { Message = $"Stock insuficiente. Solo quedan {producto.Stock}." });
-                    }
-                    itemEnCarrito.Cantidad = itemDto.NuevaCantidad;
-                }
-                
-                await _context.SaveChangesAsync();
-                
-                var carritoActualizado = await GetMyCartAsync();
-                return Ok(MapCartToDto(carritoActualizado!));
-            }
-
-            [HttpDelete("remove/{productoId}")]
-            public async Task<IActionResult> RemoveItemFromCart(int productoId)
-            {
-                var carrito = await GetMyCartAsync();
-                if (carrito == null) return Unauthorized();
-
-                var itemEnCarrito = carrito.Items.FirstOrDefault(i => i.ProductoId == productoId);
-                if (itemEnCarrito == null)
-                {
-                    return NotFound(new { Message = "Producto no encontrado en el carrito." });
-                }
-
-                _context.CarritoItems.Remove(itemEnCarrito);
-                await _context.SaveChangesAsync();
-                
-                var carritoActualizado = await GetMyCartAsync();
-                return Ok(MapCartToDto(carritoActualizado!));
-            }
+            _context.CarritoItems.Remove(itemEnCarrito);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Item eliminado del carrito." });
         }
     }
+}

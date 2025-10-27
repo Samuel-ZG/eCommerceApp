@@ -43,7 +43,19 @@ builder.Services.AddAuthentication(options =>
 // --- 4. Añadir Servicios ---
 builder.Services.AddControllers();
 
-// --- 5. Configurar Swagger (La documentación de tu API) ---
+// --- NUEVO: AÑADIR POLÍTICA DE CORS ---
+// Esto le dice a tu API que acepte peticiones de cualquier origen (localhost)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFlutterDev",
+        builder => builder.AllowAnyOrigin()
+                          .AllowAnyHeader()
+                          .AllowAnyMethod());
+});
+// --- FIN DE CORS ---
+
+
+// --- 5. Configurar Swagger (La documentation de tu API) ---
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -107,6 +119,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// --- NUEVO: USAR LA POLÍTICA DE CORS ---
+// ¡Importante! Debe ir ANTES de Authentication y Authorization.
+app.UseCors("AllowFlutterDev");
+// --- FIN DE CORS ---
+
 
 // --- ¡ORDEN IMPORTANTE! ---
 // 1. app.UseAuthentication(): Verifica QUIÉN eres (lee el token).
