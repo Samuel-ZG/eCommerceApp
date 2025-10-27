@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ECommerceAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class MigracionCompleta_Paso6 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -30,6 +30,8 @@ namespace ECommerceAPI.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Nombre = table.Column<string>(type: "TEXT", nullable: true),
+                    Apellido = table.Column<string>(type: "TEXT", nullable: true),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -157,6 +159,25 @@ namespace ECommerceAPI.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Carritos",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Carritos", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Carritos_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Empresas",
                 columns: table => new
                 {
@@ -173,27 +194,6 @@ namespace ECommerceAPI.Migrations
                     table.ForeignKey(
                         name: "FK_Empresas_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Pedidos",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Fecha = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Total = table.Column<decimal>(type: "decimal(18, 2)", nullable: false),
-                    UsuarioId = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Pedidos", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Pedidos_AspNetUsers_UsuarioId",
-                        column: x => x.UsuarioId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -224,27 +224,26 @@ namespace ECommerceAPI.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "DetallesPedido",
+                name: "CarritoItems",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Cantidad = table.Column<int>(type: "INTEGER", nullable: false),
-                    PrecioUnitario = table.Column<decimal>(type: "decimal(18, 2)", nullable: false),
-                    PedidoId = table.Column<int>(type: "INTEGER", nullable: false),
+                    CarritoId = table.Column<int>(type: "INTEGER", nullable: false),
                     ProductoId = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_DetallesPedido", x => x.Id);
+                    table.PrimaryKey("PK_CarritoItems", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_DetallesPedido_Pedidos_PedidoId",
-                        column: x => x.PedidoId,
-                        principalTable: "Pedidos",
+                        name: "FK_CarritoItems_Carritos_CarritoId",
+                        column: x => x.CarritoId,
+                        principalTable: "Carritos",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_DetallesPedido_Productos_ProductoId",
+                        name: "FK_CarritoItems_Productos_ProductoId",
                         column: x => x.ProductoId,
                         principalTable: "Productos",
                         principalColumn: "Id",
@@ -289,24 +288,25 @@ namespace ECommerceAPI.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_DetallesPedido_PedidoId",
-                table: "DetallesPedido",
-                column: "PedidoId");
+                name: "IX_CarritoItems_CarritoId",
+                table: "CarritoItems",
+                column: "CarritoId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_DetallesPedido_ProductoId",
-                table: "DetallesPedido",
+                name: "IX_CarritoItems_ProductoId",
+                table: "CarritoItems",
                 column: "ProductoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Carritos_UserId",
+                table: "Carritos",
+                column: "UserId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Empresas_UserId",
                 table: "Empresas",
                 column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Pedidos_UsuarioId",
-                table: "Pedidos",
-                column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Productos_EmpresaId",
@@ -333,13 +333,13 @@ namespace ECommerceAPI.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "DetallesPedido");
+                name: "CarritoItems");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Pedidos");
+                name: "Carritos");
 
             migrationBuilder.DropTable(
                 name: "Productos");

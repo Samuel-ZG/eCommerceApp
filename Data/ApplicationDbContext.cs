@@ -1,59 +1,70 @@
-using ECommerceAPI.Models;
+using ECommerceAPI.Models; // Para Empresa, Producto, Carrito
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECommerceAPI.Data
 {
-    // Hereda de IdentityDbContext para incluir las tablas de Usuarios y Roles
+    // ¡Importante! Hereda de IdentityDbContext<ApplicationUser>
+    // para usar nuestra clase de usuario personalizada.
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
-        // --- Tablas de E-Commerce ---
-        public DbSet<Empresa> Empresas { get; set; }
-        public DbSet<Producto> Productos { get; set; }
-        public DbSet<Pedido> Pedidos { get; set; }
-        public DbSet<DetallePedido> DetallesPedido { get; set; }
-
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
         }
 
+        // --- Tablas de nuestra App ---
+        public DbSet<Empresa> Empresas { get; set; }
+        public DbSet<Producto> Productos { get; set; }
+        public DbSet<Carrito> Carritos { get; set; }
+        public DbSet<CarritoItem> CarritoItems { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
-            // Llama al OnModelCreating de Identity para que configure sus tablas
-            base.OnModelCreating(builder);
+            // --- Configuración de Identity ---
+            base.OnModelCreating(builder); // <- ¡Siempre primero!
 
-            // --- Configuraciones de Relaciones (E-Commerce) ---
+            
+            // --- Relaciones (Pasos 3 y 4) ---
 
-            // Relación Usuario -> Empresa (Un Usuario tiene Muchas Empresas)
-            builder.Entity<ApplicationUser>()
-                .HasMany(u => u.Empresas)
-                .WithOne(e => e.User)
-                .HasForeignKey(e => e.UserId);
-
-            // Relación Empresa -> Producto (Una Empresa tiene Muchos Productos)
+            // Relación 1-a-1: Empresa <-> ApplicationUser
+            // Un usuario (con rol Empresa) gestiona una Empresa
             builder.Entity<Empresa>()
-                .HasMany(e => e.Productos)
-                .WithOne(p => p.Empresa)
-                .HasForeignKey(p => p.EmpresaId);
+                .HasOne(e => e.User) // Una Empresa tiene un User
+                .WithMany() // Un User puede (en teoría) tener muchas empresas, aunque no lo usemos
+                .HasForeignKey(e => e.UserId); // La clave foránea está en Empresa
 
-            // Relación Usuario -> Pedido (Un Usuario tiene Muchos Pedidos)
+            // Relación 1-a-Muchos: Empresa -> Producto
+            // Una Empresa tiene muchos Productos
+            builder.Entity<Empresa>()
+                .HasMany(e => e.Productos) // Una Empresa tiene muchos Productos
+                .WithOne(p => p.Empresa) // Un Producto pertenece a una Empresa
+                .HasForeignKey(p => p.EmpresaId); // La clave foránea está en Producto
+
+
+            // --- Relaciones del Carrito (Paso 6) ---
+
+            // Relación 1-a-1: ApplicationUser <-> Carrito
+            // Un Usuario tiene un Carrito
             builder.Entity<ApplicationUser>()
-                .HasMany(u => u.Pedidos)
-                .WithOne(p => p.Usuario)
-                .HasForeignKey(p => p.UsuarioId);
+                .HasOne(u => u.Carrito) // Un User tiene un Carrito
+                .WithOne(c => c.User) // Un Carrito pertenece a un User
+                .HasForeignKey<Carrito>(c => c.UserId); // La clave foránea está en Carrito
 
-            // Relación Pedido -> DetallePedido (Un Pedido tiene Muchos Detalles)
-            builder.Entity<Pedido>()
-                .HasMany(p => p.Detalles)
-                .WithOne(d => d.Pedido)
-                .HasForeignKey(d => d.PedidoId);
+            // Relación 1-a-Muchos: Carrito -> CarritoItem
+            // Un Carrito tiene muchos Items
+            builder.Entity<Carrito>()
+                .HasMany(c => c.Items) // Un Carrito tiene muchos Items
+                .WithOne(ci => ci.Carrito) // Un Item pertenece a un Carrito
+                .HasForeignKey(ci => ci.CarritoId); // La clave foránea está en CarritoItem
 
-            // Relación Producto -> DetallePedido (Un Producto puede estar en Muchos Detalles)
+            // Relación 1-a-Muchos: Producto -> CarritoItem
+            // Un Producto puede estar en muchos Items de carrito
             builder.Entity<Producto>()
-                .HasMany<DetallePedido>()
-                .WithOne(d => d.Producto)
-                .HasForeignKey(d => d.ProductoId);
+                .HasMany<CarritoItem>() // Un Producto puede estar en muchos CarritoItems
+                .WithOne(ci => ci.Producto) // Un Item tiene un Producto
+                .HasForeignKey(ci => ci.ProductoId); // La clave foránea está en CarritoItem
         }
     }
 }

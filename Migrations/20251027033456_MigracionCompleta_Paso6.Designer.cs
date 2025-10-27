@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ECommerceAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251027022229_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251027033456_MigracionCompleta_Paso6")]
+    partial class MigracionCompleta_Paso6
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -27,6 +27,9 @@ namespace ECommerceAPI.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Apellido")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -43,6 +46,9 @@ namespace ECommerceAPI.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Nombre")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedEmail")
@@ -84,7 +90,25 @@ namespace ECommerceAPI.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("ECommerceAPI.Models.DetallePedido", b =>
+            modelBuilder.Entity("ECommerceAPI.Models.Carrito", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Carritos");
+                });
+
+            modelBuilder.Entity("ECommerceAPI.Models.CarritoItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -93,22 +117,19 @@ namespace ECommerceAPI.Migrations
                     b.Property<int>("Cantidad")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("PedidoId")
+                    b.Property<int>("CarritoId")
                         .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("PrecioUnitario")
-                        .HasColumnType("decimal(18, 2)");
 
                     b.Property<int>("ProductoId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PedidoId");
+                    b.HasIndex("CarritoId");
 
                     b.HasIndex("ProductoId");
 
-                    b.ToTable("DetallesPedido");
+                    b.ToTable("CarritoItems");
                 });
 
             modelBuilder.Entity("ECommerceAPI.Models.Empresa", b =>
@@ -137,29 +158,6 @@ namespace ECommerceAPI.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Empresas");
-                });
-
-            modelBuilder.Entity("ECommerceAPI.Models.Pedido", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("Fecha")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("Total")
-                        .HasColumnType("decimal(18, 2)");
-
-                    b.Property<string>("UsuarioId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("Pedidos");
                 });
 
             modelBuilder.Entity("ECommerceAPI.Models.Producto", b =>
@@ -323,11 +321,22 @@ namespace ECommerceAPI.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("ECommerceAPI.Models.DetallePedido", b =>
+            modelBuilder.Entity("ECommerceAPI.Models.Carrito", b =>
                 {
-                    b.HasOne("ECommerceAPI.Models.Pedido", "Pedido")
-                        .WithMany("Detalles")
-                        .HasForeignKey("PedidoId")
+                    b.HasOne("ECommerceAPI.Data.ApplicationUser", "User")
+                        .WithOne("Carrito")
+                        .HasForeignKey("ECommerceAPI.Models.Carrito", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ECommerceAPI.Models.CarritoItem", b =>
+                {
+                    b.HasOne("ECommerceAPI.Models.Carrito", "Carrito")
+                        .WithMany("Items")
+                        .HasForeignKey("CarritoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -337,7 +346,7 @@ namespace ECommerceAPI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Pedido");
+                    b.Navigation("Carrito");
 
                     b.Navigation("Producto");
                 });
@@ -345,23 +354,12 @@ namespace ECommerceAPI.Migrations
             modelBuilder.Entity("ECommerceAPI.Models.Empresa", b =>
                 {
                     b.HasOne("ECommerceAPI.Data.ApplicationUser", "User")
-                        .WithMany("Empresas")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("ECommerceAPI.Models.Pedido", b =>
-                {
-                    b.HasOne("ECommerceAPI.Data.ApplicationUser", "Usuario")
-                        .WithMany("Pedidos")
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("ECommerceAPI.Models.Producto", b =>
@@ -428,19 +426,17 @@ namespace ECommerceAPI.Migrations
 
             modelBuilder.Entity("ECommerceAPI.Data.ApplicationUser", b =>
                 {
-                    b.Navigation("Empresas");
+                    b.Navigation("Carrito");
+                });
 
-                    b.Navigation("Pedidos");
+            modelBuilder.Entity("ECommerceAPI.Models.Carrito", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("ECommerceAPI.Models.Empresa", b =>
                 {
                     b.Navigation("Productos");
-                });
-
-            modelBuilder.Entity("ECommerceAPI.Models.Pedido", b =>
-                {
-                    b.Navigation("Detalles");
                 });
 #pragma warning restore 612, 618
         }
